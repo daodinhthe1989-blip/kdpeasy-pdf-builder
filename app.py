@@ -23,13 +23,16 @@ KDP_MIN_DPI = 300
 
 # KDP page-size presets — (width_inch, height_inch)
 KDP_SIZES: Dict[str, Tuple[float, float]] = {
-    "6 × 9 in  (Standard book)":     (6.0, 9.0),
-    "5 × 8 in  (Novel)":             (5.0, 8.0),
-    "7 × 10 in (Workbook)":          (7.0, 10.0),
-    "8 × 10 in (Photo book)":        (8.0, 10.0),
-    "8.5 × 11 in (Letter)":          (8.5, 11.0),
-    "A4 (210 × 297 mm)":             (8.27, 11.69),
-    "A5 (148 × 210 mm)":             (5.83, 8.27),
+    "6 × 9 in  (Standard book)":            (6.0, 9.0),
+    "6.14 × 9.21 in (Royal)":               (6.14, 9.21),
+    "5 × 8 in  (Novel)":                    (5.0, 8.0),
+    "5.5 × 8.5 in (Digest)":                (5.5, 8.5),
+    "7 × 10 in (Workbook)":                 (7.0, 10.0),
+    "8 × 10 in (Photo book)":               (8.0, 10.0),
+    "8.5 × 8.5 in (Square — kids coloring)": (8.5, 8.5),
+    "8.5 × 11 in (Letter)":                 (8.5, 11.0),
+    "A4 (210 × 297 mm)":                    (8.27, 11.69),
+    "A5 (148 × 210 mm)":                    (5.83, 8.27),
 }
 
 FIT_MODES = {
