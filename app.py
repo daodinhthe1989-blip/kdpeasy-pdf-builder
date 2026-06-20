@@ -201,10 +201,27 @@ with header_right:
 with st.sidebar:
     st.markdown("### ⚙️ PDF settings")
 
-    size_label = st.selectbox("KDP page size", list(KDP_SIZES.keys()), index=0)
+    auto_fit_size = st.checkbox(
+        "🪄 Auto-fit page size to first image",
+        value=True,
+        help="When ON, the PDF page size matches your uploaded images "
+             "(px ÷ DPI). Great if your images already include KDP bleed "
+             "or come from another tool. Turn OFF to force a specific "
+             "size below.",
+    )
+
+    size_label = st.selectbox(
+        "KDP page size", list(KDP_SIZES.keys()), index=0,
+        disabled=auto_fit_size,
+        help="Ignored when Auto-fit is on.",
+    )
     page_w_in, page_h_in = KDP_SIZES[size_label]
 
-    fit_label = st.selectbox("Image fit mode", list(FIT_MODES.keys()), index=0)
+    fit_label = st.selectbox(
+        "Image fit mode", list(FIT_MODES.keys()), index=0,
+        disabled=auto_fit_size,
+        help="Ignored when Auto-fit is on (images are placed as-is).",
+    )
     fit_mode = FIT_MODES[fit_label]
 
     bg_color_hex = st.color_picker("Page background color", "#FFFFFF")
@@ -413,7 +430,11 @@ else:
 
         with c4:
             if w and h:
-                dpi = effective_dpi(w, h, page_w_in, page_h_in)
+                if auto_fit_size:
+                    # Page size will match the PNG so effective DPI = target.
+                    dpi = int(target_dpi)
+                else:
+                    dpi = effective_dpi(w, h, page_w_in, page_h_in)
                 if dpi < KDP_MIN_DPI:
                     low_dpi_count += 1
                 st.markdown(dpi_badge_html(dpi), unsafe_allow_html=True)
@@ -534,14 +555,34 @@ def build_pdf(items: List[Dict],
 # Build button + download
 # ═══════════════════════════════════════════════════════════════════
 if N > 0:
+    # When auto-fit is on, override page size with first image's dimensions
+    effective_w_in, effective_h_in = page_w_in, page_h_in
+    effective_fit_mode = fit_mode
+    effective_size_label = size_label
+    if auto_fit_size:
+        try:
+            first_img = Image.open(io.BytesIO(
+                st.session_state.image_order[0]["bytes"]))
+            first_img = ImageOps.exif_transpose(first_img)
+            iw, ih = first_img.size
+            effective_w_in = iw / float(target_dpi)
+            effective_h_in = ih / float(target_dpi)
+            effective_fit_mode = "fit"  # images at native size: identity for matching pages
+            effective_size_label = (
+                f"Auto {effective_w_in:.3f}\" × {effective_h_in:.3f}\""
+                f"  (from {iw}×{ih} px @ {target_dpi} DPI)"
+            )
+        except Exception:
+            pass
+
     st.markdown("### 3️⃣ Build your KDP PDF")
     col_a, col_b = st.columns([1, 2])
     with col_a:
         go = st.button(f"📄 Build PDF ({N} pages)", use_container_width=True)
     with col_b:
         st.caption(
-            f"Page size: **{size_label}**  •  "
-            f"Fit: **{fit_label.split(' — ')[0]}**  •  "
+            f"Page size: **{effective_size_label}**  •  "
+            f"Fit: **{effective_fit_mode.title()}**  •  "
             f"DPI: **{target_dpi}**  •  "
             f"Quality: **{jpeg_quality}**"
         )
@@ -551,8 +592,8 @@ if N > 0:
         try:
             pdf_bytes = build_pdf(
                 st.session_state.image_order,
-                page_w_in, page_h_in,
-                int(target_dpi), fit_mode,
+                effective_w_in, effective_h_in,
+                int(target_dpi), effective_fit_mode,
                 hex_to_rgb(bg_color_hex),
                 int(jpeg_quality),
                 progress_cb=lambda p: progress.progress(p, text=f"Composing pages… {int(p*100)}%"),
